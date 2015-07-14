@@ -19,8 +19,8 @@ class Game
     @center =
       x: @width / 2
       y: @height / 2
-    @aaHeight = @width * 9 / 16
-    @log "height: #{@height}. height if screen was 16:9 (aspect adjusted): #{@aaHeight}"
+    # @aaHeight = @width * 9 / 16
+    # @log "height: #{@height}. height if screen was 16:9 (aspect adjusted): #{@aaHeight}"
     # @pauseButtonSize = @aaHeight / 15
     @colors =
       white:      { r:   1, g:   1, b:   1, a:   1 }

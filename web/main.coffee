@@ -190,7 +190,7 @@ class NativeApp
 
 screen = document.getElementById 'screen'
 resizeScreen = ->
-  desiredAspectRatio = 16 / 9
+  desiredAspectRatio = 9 / 16
   currentAspectRatio = window.innerWidth / window.innerHeight
   if currentAspectRatio < desiredAspectRatio
     screen.width = window.innerWidth
