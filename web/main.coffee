@@ -23,6 +23,7 @@ class NativeApp
     window.addEventListener 'mouseup',   @onMouseUp.bind(this), false
     @context = @screen.getContext("2d")
     @textures = [
+      "../res/raw/gems.png"
       "../res/raw/tiles.png"
     ]
 

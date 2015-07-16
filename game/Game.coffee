@@ -27,6 +27,8 @@ class Game
       black:      { r:   0, g:   0, b:   0, a:   1 }
       red:        { r:   1, g:   0, b:   0, a:   1 }
       orange:     { r:   1, g: 0.5, b:   0, a:   1 }
+      background: { r: 0.2, g: 0.2, b: 0.2, a:   1 }
+
     #   gold:       { r:   1, g:   1, b:   0, a:   1 }
     #   buttontext: { r:   1, g:   1, b:   1, a:   1 }
     #   lightgray:  { r: 0.5, g: 0.5, b: 0.5, a:   1 }
@@ -41,13 +43,31 @@ class Game
     #   bid:        { r:   0, g: 0.6, b:   0, a:   1 }
 
     @textures =
-      "tiles": 0
+      "gems": 0
+      "tiles": 1
 
     # @blackout = null # don't start in a game
     # @lastErr = ''
     @paused = false
     # @howto = 0
     @renderCommands = []
+
+    @gemNames = [
+      "broken"
+      "bell"
+      "pink"
+      "cyan"
+      "red1"
+      "green1"
+      "blue1"
+      "orange1"
+    ]
+    gemCount = @gemNames.length
+    @grid = []
+    for col in [0...8]
+      @grid[col] = []
+      for y in [0...8]
+        @grid[col][y] = Math.floor(Math.random() * gemCount)
 
     # @bid = 0
     # @bidButtonSize = @aaHeight / 8
@@ -384,8 +404,16 @@ class Game
     # Reset render commands
     @renderCommands.length = 0
 
-    @spriteRenderer.render "solid", 0, 0, @width, @height, 0, 0, 0, @colors.red, (x, y) =>
+    @spriteRenderer.render "solid", 0, 0, @width, @height, 0, 0, 0, @colors.background, (x, y) =>
       @log "someone clicked on #{x}, #{y}"
+
+    gemSize = @width / 8
+
+    for x in [0...8]
+      for y in [0...8]
+        @spriteRenderer.render @gemNames[ @grid[x][y] ], x * (gemSize), y * (gemSize), gemSize, gemSize, 0, 0, 0, @colors.white
+
+    # render: (spriteName, dx, dy, dw, dh, rot, anchorx, anchory, color, cb) ->
 
     # if @howto > 0
     #   @renderHowto()
