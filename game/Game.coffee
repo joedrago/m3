@@ -2,6 +2,7 @@
 # Button = require 'Button'
 # FontRenderer = require 'FontRenderer'
 SpriteRenderer = require 'SpriteRenderer'
+Grid = require 'Grid'
 # Menu = require 'Menu'
 # Hand = require 'Hand'
 # Pile = require 'Pile'
@@ -46,28 +47,13 @@ class Game
       "gems": 0
       "tiles": 1
 
-    # @blackout = null # don't start in a game
+    @grid = null # don't start in a game
     # @lastErr = ''
     @paused = false
     # @howto = 0
     @renderCommands = []
 
-    @gemNames = [
-      "broken"
-      "bell"
-      "pink"
-      "cyan"
-      "red1"
-      "green1"
-      "blue1"
-      "orange1"
-    ]
-    gemCount = @gemNames.length
-    @grid = []
-    for col in [0...8]
-      @grid[col] = []
-      for y in [0...8]
-        @grid[col][y] = Math.floor(Math.random() * gemCount)
+    @newGame()
 
     # @bid = 0
     # @bidButtonSize = @aaHeight / 8
@@ -200,6 +186,7 @@ class Game
   #   return @optionMenus.speeds[@options.speedIndex].speed
 
   newGame: ->
+    @grid = new Grid this
     # @blackout = new Blackout this, {
     #   rounds: @optionMenus.rounds[@options.roundIndex].data
     #   players: [
@@ -358,8 +345,8 @@ class Game
     updated = false
     # if @updateMainMenu(dt)
     #   updated = true
-    # if @updateGame(dt)
-    #   updated = true
+    if @updateGame(dt)
+      updated = true
 
     return updated
 
@@ -370,10 +357,13 @@ class Game
     return updated
 
   updateGame: (dt) ->
-    # return false if @blackout == null
+    return false if @grid == null
 
     updated = false
-    # if @pile.update(dt)
+    if @grid.update(dt)
+      updated = true
+
+      # if @pile.update(dt)
     #   updated = true
     # if @pile.readyForNextTrick()
     #   @nextAITick -= dt
@@ -407,12 +397,6 @@ class Game
     @spriteRenderer.render "solid", 0, 0, @width, @height, 0, 0, 0, @colors.background, (x, y) =>
       @log "someone clicked on #{x}, #{y}"
 
-    gemSize = @width / 8
-
-    for x in [0...8]
-      for y in [0...8]
-        @spriteRenderer.render @gemNames[ @grid[x][y] ], x * (gemSize), y * (gemSize), gemSize, gemSize, 0, 0, 0, @colors.white
-
     # render: (spriteName, dx, dy, dw, dh, rot, anchorx, anchory, color, cb) ->
 
     # if @howto > 0
@@ -420,7 +404,8 @@ class Game
     # else if @blackout == null
     #   @renderMainMenu()
     # else
-    #   @renderGame()
+
+    @renderGame()
 
     return @renderCommands
 
@@ -445,7 +430,11 @@ class Game
   # renderMainMenu: ->
   #   @mainMenu.render()
 
-  # renderGame: ->
+  renderGame: ->
+    return false if @grid == null
+
+    @grid.render()
+    return
 
   #   # background
   #   @spriteRenderer.render "solid", 0, 0, @width, @height, 0, 0, 0, @colors.background
