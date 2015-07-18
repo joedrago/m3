@@ -222,10 +222,14 @@ class Game
   touchMove: (x, y) ->
     # if @blackout != null
     #   @hand.move(x, y)
+    if @grid != null
+      @grid.move(x, y)
 
   touchUp: (x, y) ->
     # if @blackout != null
     #   @hand.up(x, y)
+    if @grid != null
+      @grid.up(x, y)
 
   # -----------------------------------------------------------------------------------------------------
   # bid handling
