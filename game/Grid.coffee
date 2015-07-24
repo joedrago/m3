@@ -25,14 +25,17 @@ class Grid
   constructor: (@game) ->
     @game.log "Grid created."
     @MARGIN = 20
+    @IDLE_SCALE = 0.95
+    @SELECTED_SCALE = 1.15
 
     @gemSpeed =
       r: Math.PI * 2
       s: 2.5
-      t: 4 * @game.width
+      t: 3 * @game.width
 
     @size = @game.width - (@MARGIN * 2)
-    @gemSize = @size / 8
+    @gemSize = Math.floor(@size / 8)
+    @gemSizeHalf = @gemSize >> 1
     @x = @MARGIN
     @y = @MARGIN
     @resetDrag()
@@ -89,6 +92,7 @@ class Grid
       x: coords.x
       y: coords.y
       r: 0
+      s: 1
     }
     @grid[x][y].type = Math.floor(Math.random() * 8)
 
@@ -99,6 +103,7 @@ class Grid
         anim = grid[x][y].anim
         anim.req.x = coords.x
         anim.req.y = coords.y
+        anim.req.s = @IDLE_SCALE
 
   update: (dt) ->
     updated = false
@@ -109,15 +114,11 @@ class Grid
     return updated
 
   select: (x, y, cx, cy) ->
-    c = @gridToCoords(x, y)
-    # @game.log "click on gem #{x}, #{y}"
     @dragSrcX = x
     @dragSrcY = y
     @dragDstX = x
     @dragDstY = y
-    anim = @grid[@dragSrcX][@dragSrcY].anim
-    anim.req.x = c.x
-    anim.req.y = c.y
+    @move(cx, cy)
 
   dist: (a, b) ->
     return Math.abs(a - b)
@@ -139,11 +140,6 @@ class Grid
         g.x = @dragSrcX
       @dragDstX = g.x
       @dragDstY = g.y
-      c = @gridToCoords(g.x, g.y)
-      # @game.log "g #{g.x}, #{g.y}"
-      anim = @grid[@dragSrcX][@dragSrcY].anim
-      anim.req.x = c.x
-      anim.req.y = c.y
 
       for x in [0...8]
         for y in [0...8]
@@ -162,6 +158,7 @@ class Grid
         currY += dy
       @game.log "dx #{dx}, dy #{dy}"
       @resetPositions(@futureGrid)
+      @grid[@dragSrcX][@dragSrcY].anim.req.s = @SELECTED_SCALE
 
   up: (x, y) ->
     @resetDrag()
@@ -178,8 +175,14 @@ class Grid
         highlighted = ! (( (@dragSrcX != x) or (@dragSrcY != y) ) and  ( (@dragDstX != x) or (@dragDstY != y) ))
         do (x, y, highlighted) =>
           gem = @grid[x][y]
-          @game.spriteRenderer.render @typeToSprite(gem.type, gem.power, highlighted), gem.anim.cur.x, gem.anim.cur.y, @gemSize, @gemSize, 0, 0, 0, @game.colors.white, (cx, cy) =>
-            @select(x, y, cx, cy)
+          @game.spriteRenderer.render @typeToSprite(gem.type, gem.power, highlighted),
+            gem.anim.cur.x + @gemSizeHalf, gem.anim.cur.y + @gemSizeHalf,
+            @gemSize * gem.anim.cur.s, @gemSize * gem.anim.cur.s,
+            0,
+            0.5, 0.5,
+            @game.colors.white,
+            (cx, cy) =>
+              @select(x, y, cx, cy)
 
     # if (@dragSrcX != -1) and (@dragSrcY != -1)
     #   gem = @grid[@dragSrcX][@dragSrcY]
