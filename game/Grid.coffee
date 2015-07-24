@@ -10,7 +10,7 @@ SPRITE_NAMES = [
   "orange"
 
   # special gems
-  "cyan"
+  #"cyan"
   "bell"
   "pink"
   "broken"
@@ -110,7 +110,7 @@ class Grid
       }
       anim.req.y = coords.y
       @grid[x][y].anim = anim
-      @grid[x][y].type = Math.floor(Math.random() * 8)
+      @grid[x][y].type = Math.floor(Math.random() * SPRITE_NAMES.length)
 
   fillColumn: (x) ->
     while @grid[x].length < 8
