@@ -237,8 +237,8 @@ class Grid
     return updated
 
   select: (x, y, cx, cy) ->
-    if @turns == 0
-      return
+    return if @turns == 0
+    return if @animating
 
     @dragSrcX = x
     @dragSrcY = y
