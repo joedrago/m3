@@ -10,11 +10,21 @@ SPRITE_NAMES = [
   "orange"
 
   # special gems
-  #"cyan"
   "bell"
   "pink"
   "broken"
+  #"cyan"
 ]
+
+GEM_TYPES =
+  RED: 0
+  GREEN: 1
+  BLUE: 2
+  ORANGE: 3
+  BELL: 4
+  PINK: 5
+  BROKEN: 6
+  CYAN: 7
 
 Number.prototype.clamp = (min, max) ->
   return Math.min(Math.max(this, min), max)
@@ -195,14 +205,19 @@ class Grid
     return hasMatch
 
   shatter: ->
-    totalScore = 0
     group =
       list: []
+    regularGemTotal = 0
+    extraTurns = 0
     for x in [0...8]
       newColumn = []
       for y in [0...8]
         if @grid[x][y].score > 0
-          totalScore += @grid[x][y].score
+          switch @grid[x][y].type
+            when GEM_TYPES.RED, GEM_TYPES.GREEN, GEM_TYPES.BLUE, GEM_TYPES.ORANGE
+              regularGemTotal += Math.max(@grid[x][y].score - 2, 1)
+            when GEM_TYPES.BELL
+              extraTurns += 1
           group.list.push {
             x: x
             y: y
@@ -213,6 +228,7 @@ class Grid
           newColumn.push @grid[x][y]
       @grid[x] = newColumn
       @fillColumn(x)
+
     if group.list.length > 0
       group.timer = @SHATTER_TIME
       group.color = { r: 1, g: 1, b: 1, a: 1 }
@@ -220,7 +236,9 @@ class Grid
       @updateShatterGroup(group)
       @shattered.push group
 
-    @game.log "Shattered for #{totalScore} points"
+    # Update the meta game with this round of shattered spoils
+    @progress += regularGemTotal
+    @turns += 1 + (extraTurns >> 1)
 
   updateShatterGroup: (group) ->
     t = 1.0 - (group.timer / @SHATTER_TIME)
@@ -359,6 +377,7 @@ class Grid
 
 
     @game.fontRenderer.render @game.font, textHeight, "Turns: #{@turns}", 0, 0, 0, 0, @game.colors.white
+    @game.fontRenderer.render @game.font, textHeight, "Progress: #{@progress}", 0, textHeight, 0, 0, @game.colors.white
 
     if not @animating and @turns == 0
       @game.spriteRenderer.render "solid", 0, 0, @game.width, @game.height, 0, 0, 0, @game.colors.clear, (x, y) =>
