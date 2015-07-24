@@ -24,14 +24,14 @@ Number.prototype.clamp = (min, max) ->
 class Grid
   constructor: (@game) ->
     @game.log "Grid created."
-    @MARGIN = 20
+    @MARGIN = 10
     @IDLE_SCALE = 0.95
     @SELECTED_SCALE = 1.15
 
     @gemSpeed =
       r: Math.PI * 2
       s: 2.5
-      t: 3 * @game.width
+      t: 2 * @game.width
 
     @size = @game.width - (@MARGIN * 2)
     @gemSize = Math.floor(@size / 8)
@@ -41,26 +41,15 @@ class Grid
     @resetDrag()
 
     @grid = []
+    @nextGrid = []
     for x in [0...8]
       @grid[x] = []
+      @fillColumn(x)
+      @nextGrid[x] = []
       for y in [0...8]
-        @grid[x].push {
-          type: 0
-          anim: null
-        }
-        @randomGem(x, y)
+        @nextGrid[x].push null
 
-    @futureGrid = []
-    for x in [0...8]
-      @futureGrid[x] = []
-      for y in [0...8]
-        @futureGrid[x].push null
-
-  resetDrag: ->
-    @dragSrcX = -1
-    @dragSrcY = -1
-    @dragDstX = -1
-    @dragDstY = -1
+    @animating = true
 
   gridToCoords: (x, y) ->
     return {
@@ -85,16 +74,35 @@ class Grid
       name += "_H"
     return name
 
-  randomGem: (x, y) ->
-    coords = @gridToCoords(x, y)
-    @grid[x][y].anim = new Animation {
-      speed: @gemSpeed
-      x: coords.x
-      y: coords.y
-      r: 0
-      s: 1
-    }
-    @grid[x][y].type = Math.floor(Math.random() * 8)
+  randomGem: (x) ->
+    if @grid[x].length < 8
+      @grid[x].push {
+        type: 0
+        anim: null
+        score: 0
+      }
+      y = @grid[x].length - 1
+      coords = @gridToCoords(x, y)
+      anim = new Animation {
+        speed: @gemSpeed
+        x: coords.x
+        y: coords.y - (@gemSize * y)
+        r: 0
+        s: @IDLE_SCALE
+      }
+      anim.req.y = coords.y
+      @grid[x][y].anim = anim
+      @grid[x][y].type = Math.floor(Math.random() * 8)
+
+  fillColumn: (x) ->
+    while @grid[x].length < 8
+      @randomGem(x)
+
+  resetDrag: ->
+    @dragSrcX = -1
+    @dragSrcY = -1
+    @dragDstX = -1
+    @dragDstY = -1
 
   resetPositions: (grid) ->
     for x in [0...8]
@@ -105,20 +113,73 @@ class Grid
         anim.req.y = coords.y
         anim.req.s = @IDLE_SCALE
 
-  update: (dt) ->
-    updated = false
+  resetScores: (grid) ->
     for x in [0...8]
       for y in [0...8]
-        if @grid[x][y].anim.update(dt)
-          updated = true
-    return updated
+        grid[x][y].score = 0
 
-  select: (x, y, cx, cy) ->
-    @dragSrcX = x
-    @dragSrcY = y
-    @dragDstX = x
-    @dragDstY = y
-    @move(cx, cy)
+  runLength: (grid, x, y, dx, dy) ->
+    len = 1
+    type = grid[x][y].type
+    loop
+      x += dx
+      y += dy
+      break if x < 0
+      break if y < 0
+      break if x >= 8
+      break if y >= 8
+      break if grid[x][y].type != type
+      len += 1
+    return len
+
+  scoreRun: (grid, x, y, dx, dy, len, score = 1) ->
+    while len
+      grid[x][y].score += score
+      x += dx
+      y += dy
+      len -= 1
+    return
+
+  scoreGrid: (grid) ->
+    @resetScores(grid)
+    hasMatch = false
+
+    for y in [0...8]
+      x = 0
+      while x < 6
+        len = @runLength(grid, x, y, 1, 0)
+        if len >= 3
+          hasMatch = true
+          @scoreRun(grid, x, y, 1, 0, len, len)
+          x += len
+        else
+          x += 1
+
+    for x in [0...8]
+      y = 0
+      while y < 6
+        len = @runLength(grid, x, y, 0, 1)
+        if len >= 3
+          hasMatch = true
+          @scoreRun(grid, x, y, 0, 1, len, len)
+          y += len
+        else
+          y += 1
+
+    return hasMatch
+
+  shatter: ->
+    totalScore = 0
+    for x in [0...8]
+      newColumn = []
+      for y in [0...8]
+        if @grid[x][y].score > 0
+          totalScore += @grid[x][y].score
+          # TODO: put .anim in a list of things to "shatter" / "fly away"
+        else
+          newColumn.push @grid[x][y]
+      @grid[x] = newColumn
+      @fillColumn(x)
 
   dist: (a, b) ->
     return Math.abs(a - b)
@@ -131,62 +192,96 @@ class Grid
       return -1
     return 0
 
+  update: (dt) ->
+    updated = false
+    for x in [0...8]
+      for y in [0...8]
+        if @grid[x][y].anim.update(dt)
+          updated = true
+
+    if (@dragSrcX == -1) and (@dragSrcY == -1)
+      if @animating and not updated
+        # animations just finished and we're not dragging. Check for chains.
+          @game.log "anims finished, checking for match"
+          hasMatch = @scoreGrid(@grid)
+          if hasMatch
+            @game.log "match found, shattering"
+            @shatter()
+            @resetPositions(@grid)
+            @resetScores(@grid)
+            updated = true
+
+    @animating = updated
+    return updated
+
+  select: (x, y, cx, cy) ->
+    @dragSrcX = x
+    @dragSrcY = y
+    @dragDstX = x
+    @dragDstY = y
+    @move(cx, cy)
+
   move: (x, y) ->
-    if (@dragSrcX != -1) and (@dragSrcY != -1)
-      g = @coordsToGrid(x, y)
-      if @dist(g.x, @dragSrcX) > @dist(g.y, @dragSrcY)
-        g.y = @dragSrcY
-      else
-        g.x = @dragSrcX
-      @dragDstX = g.x
-      @dragDstY = g.y
+    if (@dragSrcX == -1) or (@dragSrcY == -1)
+      return false
 
-      for x in [0...8]
-        for y in [0...8]
-          @futureGrid[x][y] = @grid[x][y]
-      dx = @direction(@dragSrcX, @dragDstX)
-      dy = @direction(@dragSrcY, @dragDstY)
-      currX = @dragSrcX
-      currY = @dragSrcY
-      @game.log "START"
-      while (currX != @dragDstX) || (currY != @dragDstY)
-        @game.log "GO #{currX}, #{currY} (#{dx}, #{dy})"
-        tempGem = @futureGrid[currX][currY]
-        @futureGrid[currX][currY] = @futureGrid[currX+dx][currY+dy]
-        @futureGrid[currX+dx][currY+dy] = tempGem
-        currX += dx
-        currY += dy
-      @game.log "dx #{dx}, dy #{dy}"
-      @resetPositions(@futureGrid)
-      @grid[@dragSrcX][@dragSrcY].anim.req.s = @SELECTED_SCALE
-
-  up: (x, y) ->
-    @resetDrag()
-    @resetPositions(@grid)
-
-  render: ->
-    # if (@dragDstX != -1) and (@dragDstY != -1)
-    #   gem2 = @grid[@dragDstX][@dragDstY]
-    #   @game.spriteRenderer.render @typeToSprite(gem2.type+2), gem2.anim.cur.x, gem2.anim.cur.y, @gemSize, @gemSize, 0, 0, 0, @game.colors.white
-    #   # @game.log "drawing @dragDstX #{@dragDstX}, @dragDstY #{@dragDstY}"
+    g = @coordsToGrid(x, y)
+    if @dist(g.x, @dragSrcX) > @dist(g.y, @dragSrcY)
+      g.y = @dragSrcY
+    else
+      g.x = @dragSrcX
+    @dragDstX = g.x
+    @dragDstY = g.y
 
     for x in [0...8]
       for y in [0...8]
-        highlighted = ! (( (@dragSrcX != x) or (@dragSrcY != y) ) and  ( (@dragDstX != x) or (@dragDstY != y) ))
-        do (x, y, highlighted) =>
+        @nextGrid[x][y] = @grid[x][y]
+    dx = @direction(@dragSrcX, @dragDstX)
+    dy = @direction(@dragSrcY, @dragDstY)
+    currX = @dragSrcX
+    currY = @dragSrcY
+    while (currX != @dragDstX) || (currY != @dragDstY)
+      tempGem = @nextGrid[currX][currY]
+      @nextGrid[currX][currY] = @nextGrid[currX+dx][currY+dy]
+      @nextGrid[currX+dx][currY+dy] = tempGem
+      currX += dx
+      currY += dy
+    @resetPositions(@nextGrid)
+    @grid[@dragSrcX][@dragSrcY].anim.req.s = @SELECTED_SCALE
+    hasMatch = @scoreGrid(@nextGrid)
+
+    return hasMatch
+
+  up: (x, y) ->
+    hasMatch = @move(x, y)
+    if hasMatch
+      [@grid, @nextGrid] = [@nextGrid, @grid]
+      @shatter()
+
+    @resetDrag()
+    @resetPositions(@grid)
+    @resetScores(@grid)
+
+  render: ->
+    textHeight = @gemSize >> 1
+    for x in [0...8]
+      for y in [0...8]
+        do (x, y) =>
           gem = @grid[x][y]
-          @game.spriteRenderer.render @typeToSprite(gem.type, gem.power, highlighted),
+          highlighted = (gem.score > 0) and not @animating
+          color = @game.colors.white
+          if highlighted
+            color = @game.colors.highlight
+          @game.spriteRenderer.render @typeToSprite(gem.type, gem.power),
             gem.anim.cur.x + @gemSizeHalf, gem.anim.cur.y + @gemSizeHalf,
             @gemSize * gem.anim.cur.s, @gemSize * gem.anim.cur.s,
             0,
             0.5, 0.5,
-            @game.colors.white,
+            color,
             (cx, cy) =>
               @select(x, y, cx, cy)
 
-    # if (@dragSrcX != -1) and (@dragSrcY != -1)
-    #   gem = @grid[@dragSrcX][@dragSrcY]
-    #   @game.spriteRenderer.render @typeToSprite(gem.type), gem.anim.cur.x, gem.anim.cur.y, @gemSize, @gemSize, 0, 0, 0, @game.colors.white
-    #   # @game.log "drawing @dragSrcX #{@dragSrcX}, @dragSrcY #{@dragSrcY}"
+          # if highlighted
+          #   @game.fontRenderer.render @game.font, textHeight, "#{gem.score}", gem.anim.cur.x + @gemSizeHalf, gem.anim.cur.y + @gemSizeHalf, 0.5, 0.5, @game.colors.white
 
 module.exports = Grid

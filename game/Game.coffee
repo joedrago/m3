@@ -1,6 +1,6 @@
 # Animation = require 'Animation'
 # Button = require 'Button'
-# FontRenderer = require 'FontRenderer'
+FontRenderer = require 'FontRenderer'
 SpriteRenderer = require 'SpriteRenderer'
 Grid = require 'Grid'
 # Menu = require 'Menu'
@@ -12,9 +12,9 @@ class Game
   constructor: (@native, @width, @height) ->
     @version = BUILD_TIMESTAMP
     @log("Game constructed: #{@width}x#{@height}")
-    # @fontRenderer = new FontRenderer this
+    @fontRenderer = new FontRenderer this
     @spriteRenderer = new SpriteRenderer this
-    # @font = "darkforest"
+    @font = "darkforest"
     @zones = []
     # @nextAITick = 1000 # will be set by options
     @center =
@@ -29,6 +29,7 @@ class Game
       red:        { r:   1, g:   0, b:   0, a:   1 }
       orange:     { r:   1, g: 0.5, b:   0, a:   1 }
       background: { r: 0.2, g: 0.2, b: 0.2, a:   1 }
+      highlight:  { r: 0.2, g: 0.2, b: 0.2, a:   1 }
 
     #   gold:       { r:   1, g:   1, b:   0, a:   1 }
     #   buttontext: { r:   1, g:   1, b:   1, a:   1 }
@@ -46,6 +47,7 @@ class Game
     @textures =
       "gems": 0
       "tiles": 1
+      "darkforest": 2
 
     @grid = null # don't start in a game
     # @lastErr = ''

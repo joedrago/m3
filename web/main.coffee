@@ -25,6 +25,7 @@ class NativeApp
     @textures = [
       "../res/raw/gems.png"
       "../res/raw/tiles.png"
+      "../res/raw/darkforest.png"
     ]
 
     @game = new Game(this, @width, @height)
@@ -167,7 +168,7 @@ class NativeApp
     @lastTime = now
 
     @context.clearRect(0, 0, @width, @height)
-    @game.update(dt)
+    @game.update(dt) # slow down time here by adding a divide
     renderCommands = @game.render()
 
     i = 0
