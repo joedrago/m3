@@ -37,7 +37,7 @@ class Grid
     @gemSize = Math.floor(@size / 8)
     @gemSizeHalf = @gemSize >> 1
     @x = @MARGIN
-    @y = @MARGIN
+    @y = @game.height - ((@gemSize * 10) + @MARGIN)
     @resetDrag()
 
     @grid = []

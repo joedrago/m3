@@ -1,0 +1,25 @@
+<project name="M3" default="help">
+    <target name="-pre-compile">
+        <exec executable="npm" failonerror="true">
+            <arg value="run"/>
+            <arg value="build"/>
+        </exec>
+    </target>
+    <target name="run">
+        <exec executable="adb">
+            <arg value="shell"/>
+            <arg value="am"/>
+            <arg value="start"/>
+            <arg value="-a"/>
+            <arg value="android.intent.action.MAIN"/>
+            <arg value="-n"/>
+            <arg value="com.jdrago.m3/.M3Activity"/>
+        </exec>
+    </target>
+    <target name="uninstall">
+        <exec executable="adb">
+            <arg value="uninstall"/>
+            <arg value="com.jdrago.m3"/>
+        </exec>
+    </target>
+</project>
