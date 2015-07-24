@@ -38,8 +38,12 @@ class Grid
     @gemSizeHalf = @gemSize >> 1
     @x = @MARGIN
     @y = @game.height - ((@gemSize * 10) + @MARGIN)
-    @resetDrag()
+    @centerX = @x + (@gemSize * 4)
+    @centerY = @y + (@gemSize * 4)
 
+    @newGame()
+
+  newGame: ->
     @grid = []
     @nextGrid = []
     for x in [0...8]
@@ -49,7 +53,16 @@ class Grid
       for y in [0...8]
         @nextGrid[x].push null
 
-    @animating = true
+    @resetDrag()
+    while @scoreGrid(@grid)
+      @shatter()
+    @resetPositions(@grid)
+    @resetScores(@grid)
+    @warp()
+
+    @turns = 20
+    @progress = 0
+    @animating = false
 
   gridToCoords: (x, y) ->
     return {
@@ -97,6 +110,11 @@ class Grid
   fillColumn: (x) ->
     while @grid[x].length < 8
       @randomGem(x)
+
+  warp: ->
+    for x in [0...8]
+      for y in [0...8]
+        @grid[x][y].anim.warp()
 
   resetDrag: ->
     @dragSrcX = -1
@@ -181,6 +199,8 @@ class Grid
       @grid[x] = newColumn
       @fillColumn(x)
 
+    @game.log "Shattered for #{totalScore} points"
+
   dist: (a, b) ->
     return Math.abs(a - b)
 
@@ -210,11 +230,16 @@ class Grid
             @resetPositions(@grid)
             @resetScores(@grid)
             updated = true
+          else
+            @game.log "no match found"
 
     @animating = updated
     return updated
 
   select: (x, y, cx, cy) ->
+    if @turns == 0
+      return
+
     @dragSrcX = x
     @dragSrcY = y
     @dragDstX = x
@@ -255,6 +280,7 @@ class Grid
   up: (x, y) ->
     hasMatch = @move(x, y)
     if hasMatch
+      @turns -= 1
       [@grid, @nextGrid] = [@nextGrid, @grid]
       @shatter()
 
@@ -283,5 +309,16 @@ class Grid
 
           # if highlighted
           #   @game.fontRenderer.render @game.font, textHeight, "#{gem.score}", gem.anim.cur.x + @gemSizeHalf, gem.anim.cur.y + @gemSizeHalf, 0.5, 0.5, @game.colors.white
+          # if highlighted
+
+    @game.fontRenderer.render @game.font, textHeight, "Turns: #{@turns}", 0, 0, 0, 0, @game.colors.white
+
+    if not @animating and @turns == 0
+      @game.spriteRenderer.render "solid", 0, 0, @game.width, @game.height, 0, 0, 0, @game.colors.clear, (x, y) =>
+        @game.log "new game!"
+        @newGame()
+
+      @game.fontRenderer.render @game.font, textHeight * 3, "Failure!", @centerX, @centerY, 0.5, 0.5, @game.colors.red
+      @game.fontRenderer.render @game.font, textHeight, "Click for a new game", @centerX, @centerY + (textHeight * 2), 0.5, 0.5, @game.colors.yellow
 
 module.exports = Grid

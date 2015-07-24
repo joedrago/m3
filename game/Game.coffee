@@ -28,8 +28,10 @@ class Game
       black:      { r:   0, g:   0, b:   0, a:   1 }
       red:        { r:   1, g:   0, b:   0, a:   1 }
       orange:     { r:   1, g: 0.5, b:   0, a:   1 }
+      yellow:     { r:   1, g:   1, b:   0, a:   1 }
       background: { r: 0.2, g: 0.2, b: 0.2, a:   1 }
       highlight:  { r: 0.2, g: 0.2, b: 0.2, a:   1 }
+      clear:      { r:   1, g:   1, b:   1, a:   0 }
 
     #   gold:       { r:   1, g:   1, b:   0, a:   1 }
     #   buttontext: { r:   1, g:   1, b:   1, a:   1 }
@@ -577,7 +579,8 @@ class Game
   # rendering and zones
 
   drawImage: (texture, sx, sy, sw, sh, dx, dy, dw, dh, rot, anchorx, anchory, r, g, b, a, cb) ->
-    @renderCommands.push @textures[texture], sx, sy, sw, sh, dx, dy, dw, dh, rot, anchorx, anchory, r, g, b, a
+    if a > 0
+      @renderCommands.push @textures[texture], sx, sy, sw, sh, dx, dy, dw, dh, rot, anchorx, anchory, r, g, b, a
 
     if cb?
       # caller wants to remember where this was drawn, and wants to be called back if it is ever touched
