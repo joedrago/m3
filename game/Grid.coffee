@@ -217,6 +217,7 @@ class Grid
             when GEM_TYPES.RED, GEM_TYPES.GREEN, GEM_TYPES.BLUE, GEM_TYPES.ORANGE
               regularGemTotal += Math.max(@grid[x][y].score - 2, 1)
             when GEM_TYPES.BELL
+              @game.log "bell match"
               extraTurns += 1
           group.list.push {
             x: x
@@ -238,7 +239,8 @@ class Grid
 
     # Update the meta game with this round of shattered spoils
     @progress += regularGemTotal
-    @turns += 1 + (extraTurns >> 1)
+    if extraTurns > 0
+      @turns += 1 + (extraTurns >> 1)
 
   updateShatterGroup: (group) ->
     t = 1.0 - (group.timer / @SHATTER_TIME)
