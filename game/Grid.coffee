@@ -24,15 +24,16 @@ Number.prototype.clamp = (min, max) ->
 class Grid
   constructor: (@game) ->
     @game.log "Grid created."
-    @MARGIN = 10
-    @IDLE_SCALE = 0.95
-    @SELECTED_SCALE = 1.15
 
+    # Constants / Metrics
+    @MARGIN = 10
+    @IDLE_SCALE = 0.9
+    @SELECTED_SCALE = 1
+    @SHATTER_TIME = 1000
     @gemSpeed =
       r: Math.PI * 2
       s: 2.5
       t: 2 * @game.width
-
     @size = @game.width - (@MARGIN * 2)
     @gemSize = Math.floor(@size / 8)
     @gemSizeHalf = @gemSize >> 1
@@ -40,6 +41,8 @@ class Grid
     @y = @game.height - ((@gemSize * 10) + @MARGIN)
     @centerX = @x + (@gemSize * 4)
     @centerY = @y + (@gemSize * 4)
+
+    @shattered = []
 
     @newGame()
 
@@ -59,6 +62,7 @@ class Grid
     @resetPositions(@grid)
     @resetScores(@grid)
     @warp()
+    @shattered = []
 
     @turns = 20
     @progress = 0
@@ -91,6 +95,7 @@ class Grid
     if @grid[x].length < 8
       @grid[x].push {
         type: 0
+        power: 1
         anim: null
         score: 0
       }
@@ -191,18 +196,38 @@ class Grid
 
   shatter: ->
     totalScore = 0
+    group =
+      list: []
     for x in [0...8]
       newColumn = []
       for y in [0...8]
         if @grid[x][y].score > 0
           totalScore += @grid[x][y].score
-          # TODO: put .anim in a list of things to "shatter" / "fly away"
+          group.list.push {
+            x: x
+            y: y
+            type: @grid[x][y].type
+            power: @grid[x][y].power
+          }
         else
           newColumn.push @grid[x][y]
       @grid[x] = newColumn
       @fillColumn(x)
+    if group.list.length > 0
+      group.timer = @SHATTER_TIME
+      group.color = { r: 1, g: 1, b: 1, a: 1 }
+      group.rot = 0
+      @updateShatterGroup(group)
+      @shattered.push group
 
     @game.log "Shattered for #{totalScore} points"
+
+  updateShatterGroup: (group) ->
+    t = 1.0 - (group.timer / @SHATTER_TIME)
+    group.scale = 1 + t
+    group.color.a = 1 - t
+    group.rot = Math.PI * t
+    return
 
   dist: (a, b) ->
     return Math.abs(a - b)
@@ -221,6 +246,14 @@ class Grid
       for y in [0...8]
         if @grid[x][y].anim.update(dt)
           updated = true
+
+    remainingShattered = []
+    for group in @shattered
+      group.timer -= dt
+      if group.timer > 0
+        @updateShatterGroup(group)
+        remainingShattered.push group
+    @shattered = remainingShattered
 
     if (@dragSrcX == -1) and (@dragSrcY == -1)
       if @animating and not updated
@@ -313,6 +346,17 @@ class Grid
           # if highlighted
           #   @game.fontRenderer.render @game.font, textHeight, "#{gem.score}", gem.anim.cur.x + @gemSizeHalf, gem.anim.cur.y + @gemSizeHalf, 0.5, 0.5, @game.colors.white
           # if highlighted
+
+    for group in @shattered
+      for gem in group.list
+        coords = @gridToCoords(gem.x, gem.y)
+        @game.spriteRenderer.render @typeToSprite(gem.type, gem.power),
+          coords.x + @gemSizeHalf, coords.y + @gemSizeHalf,
+          @gemSize * group.scale, @gemSize * group.scale,
+          group.rot,
+          0.5, 0.5,
+          group.color
+
 
     @game.fontRenderer.render @game.font, textHeight, "Turns: #{@turns}", 0, 0, 0, 0, @game.colors.white
 
