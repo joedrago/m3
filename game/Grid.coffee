@@ -129,7 +129,10 @@ class Grid
         anim = grid[x][y].anim
         anim.req.x = coords.x
         anim.req.y = coords.y
-        anim.req.s = @IDLE_SCALE
+        if grid[x][y].score > 0
+          anim.req.s = @SELECTED_SCALE
+        else
+          anim.req.s = @IDLE_SCALE
 
   resetScores: (grid) ->
     for x in [0...8]
@@ -296,8 +299,8 @@ class Grid
           gem = @grid[x][y]
           highlighted = (gem.score > 0) and not @animating
           color = @game.colors.white
-          if highlighted
-            color = @game.colors.highlight
+          # if highlighted
+          #   color = @game.colors.highlight
           @game.spriteRenderer.render @typeToSprite(gem.type, gem.power),
             gem.anim.cur.x + @gemSizeHalf, gem.anim.cur.y + @gemSizeHalf,
             @gemSize * gem.anim.cur.s, @gemSize * gem.anim.cur.s,
